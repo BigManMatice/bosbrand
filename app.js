@@ -3,19 +3,15 @@
 
   const CONFIG = {
     bbox: '-0.6,42.2,7.8,45.6',
-    center: [43.2267, 2.2564],
-    initialZoom: 10,
+    center: [43.6, 3.6],
+    initialZoom: 7,
     firmsSources: ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'MODIS_NRT'],
     dayRange: 1,
     refreshMs: 10 * 60 * 1000,
     maxZones: 80,
     maxReports: 45,
     clusterKm: 5,
-    defaultMapKey: '849d3127e3ba24ab0bd4d96d4a9e9ecc',
-    focusPlaces: [
-      { name: 'Carcassonne', lat: 43.2130, lng: 2.3491, radiusKm: 18 },
-      { name: 'Caux-et-Sauzens', lat: 43.2267, lng: 2.2564, radiusKm: 10 }
-    ]
+    defaultMapKey: '849d3127e3ba24ab0bd4d96d4a9e9ecc'
   };
 
   const state = {
@@ -198,19 +194,6 @@
   // Keep this list focused on Southern France and update the numbers/links when official situation reports change.
   function getOfficialSouthernFranceFires(){
     const fires = [
-
-      {
-        id:'focus-aude-carcassonne-caux-sauzens-2026-07-05',
-        title:'Focus — Carcassonne / Caux-et-Sauzens', commune:'Caux-et-Sauzens', department:'11', departmentName:'Aude', region:'Occitanie',
-        lat:43.2267, lng:2.2564, hectares:null, status:'Prioriteitszone: geen bevestigde actieve bosbrand gevonden', updated:'2026-07-05', started:'—',
-        summary:'Lokale focuszone ten westen van Carcassonne rond Caux-et-Sauzens. Deze kaart toont hier NASA-hittepunten, wind en meldingen extra prominent. Ik markeer dit bewust niet als officiële actieve brand zolang er geen bevestigde prefectuur/SDIS-bron voor een actuele bosbrand op Caux-et-Sauzens is.',
-        focus:true,
-        sources:[
-          {label:'Département de l’Aude — mairie Caux-et-Sauzens', url:'https://www.aude.fr/annuaire-mairies-du-departement/mairie-caux-et-sauzens'},
-          {label:'Géorisques/commune — risque feu de forêt identifié', url:'https://www.georisques.gouv.fr/'},
-          {label:'Mairie / PanneauPocket — débroussaillement', url:'https://app.panneaupocket.com/ville/201928478-caux-et-sauzens-11170?panneau=15867190'}
-        ]
-      },
       {
         id:'official-aude-pouzols-minervois-2026-07-02',
         title:'Aude — Pouzols-Minervois / Minervois', commune:'Pouzols-Minervois', department:'11', departmentName:'Aude', region:'Occitanie',
@@ -291,7 +274,7 @@
         sources:[{label:'Feux de Forêt — Ginestas', url:'https://feuxdeforet.fr/aude-11/ginestas-04-07-2026-1369/'}]
       }
     ];
-    return fires.map(f => ({...f, kind:'official', radiusKm: f.focus ? 7.5 : officialRadiusKm(f.hectares)}));
+    return fires.map(f => ({...f, kind:'official', radiusKm: officialRadiusKm(f.hectares)}));
   }
 
   function officialRadiusKm(hectares){
@@ -314,7 +297,7 @@
       maxFrp: 0, totalFrp: 0, highCount: 0,
       latest: {date: f.updated || '', time: ''},
       confidence: f.status && /attaque|recouper|communautaire/i.test(f.status) ? 'medium' : 'high',
-      factLevel: f.focus ? 'Focuszone — geen bevestigde actieve brand' : (f.sources.some(s => /gouv|Prefecture|Préfecture/i.test(s.label + ' ' + s.url)) ? 'Officiële bron + melding' : 'Brongecontroleerde melding')
+      factLevel: f.sources.some(s => /gouv|Prefecture|Préfecture/i.test(s.label + ' ' + s.url)) ? 'Officiële bron + melding' : 'Brongecontroleerde melding'
     };
   }
 
@@ -322,7 +305,7 @@
     return {
       id:'report-'+f.id,
       zoneId:f.id,
-      source:f.focus ? 'Focusgebied' : (f.factLevel || 'Broncontrole'),
+      source:f.factLevel || 'Broncontrole',
       department:f.department,
       title:f.title,
       age:f.updated ? 'update ' + f.updated : '',
@@ -419,18 +402,8 @@
   }
 
   function scoreZone(z){
-    const focusBoost = focusScore(z);
-    if(z.type === 'official') return 10000 + focusBoost + (z.official?.focus ? 4000 : 0) + (Number(z.official?.hectares) || 0) * 2 + (/cours|attaque|persistant/i.test(z.official?.status || '') ? 500 : 0);
-    return focusBoost + z.points.length * 10 + z.totalFrp + z.highCount * 30;
-  }
-
-  function focusScore(z){
-    let boost = 0;
-    for(const f of CONFIG.focusPlaces){
-      const d = km(z.lat, z.lng, f.lat, f.lng);
-      if(d <= f.radiusKm) boost += Math.round((f.radiusKm - d + 1) * 120);
-    }
-    return boost;
+    if(z.type === 'official') return 10000 + (Number(z.official?.hectares) || 0) * 2 + (/cours|attaque|persistant/i.test(z.official?.status || '') ? 500 : 0);
+    return z.points.length * 10 + z.totalFrp + z.highCount * 30;
   }
 
   function attachNewsAndReports(zones, reports, news){
@@ -452,7 +425,6 @@
   }
 
   function factLevel(z){
-    if(z.type === 'official' && z.official?.focus) return 'Focuszone — geen bevestigde actieve brand';
     if(z.type === 'official') return z.factLevel || (z.official?.sources?.some(s => /gouv|Prefecture|Préfecture/i.test(s.label + ' ' + s.url)) ? 'Officiële bron + melding' : 'Brongecontroleerde melding');
     const hasSatellite = z.points.length > 0;
     const hasWeather = !!z.weather;
@@ -467,7 +439,6 @@
     const ks = [];
     if(z.place){ ks.push(z.place.label, z.place.department, z.place.region); }
     if(z.official){ ks.push(z.official.title, z.official.commune, z.official.departmentName, z.official.department); }
-    if(z.official?.focus){ ks.push('Carcassonne', 'Caux-et-Sauzens', 'Sauzens', 'Carcassonnais', 'Aude'); }
     // Add coarse French dept codes by longitude/latitude is unreliable, so keep this strict.
     return ks.filter(Boolean).flatMap(s => String(s).split(/[\s,'’()\-]+/).filter(w => w.length > 4));
   }
@@ -544,7 +515,7 @@
         <div class="name">${escapeHtml(zoneTitle(z))}</div>
         <div class="meta">${zoneMeta(z)}</div>
         <div class="pill-row">
-          <span class="pill ${z.type === 'official' ? 'report' : (z.confidence === 'high' ? 'danger' : 'warn')}">${z.official?.focus ? 'focusgebied' : (z.type === 'official' ? 'officiële/gemelde brand' : confidenceLabel(z.confidence))}</span>
+          <span class="pill ${z.type === 'official' ? 'report' : (z.confidence === 'high' ? 'danger' : 'warn')}">${z.type === 'official' ? 'officiële/gemelde brand' : confidenceLabel(z.confidence)}</span>
           <span class="pill good">${escapeHtml(z.factLevel)}</span>
           ${z.weather ? `<span class="pill">Wind ${Math.round(z.weather.windSpeed)} km/u</span>` : ''}
         </div>`;
@@ -637,7 +608,7 @@
         <div class="detail-item"><span class="detail-label">${z.official ? 'Gerapporteerde oppervlakte' : 'Totale intensiteit'}</span><span class="detail-value">${z.official ? (z.official.hectares ? z.official.hectares + ' ha' : 'onbekend') : z.totalFrp.toFixed(1) + ' MW'}</span></div>
         <div class="detail-item"><span class="detail-label">Broncontrole</span><span class="detail-value">${escapeHtml(z.factLevel)}</span></div>
       </div>
-      ${z.official ? `<p class="detail-note"><strong>${z.official.focus ? 'Focusnotitie' : 'Samenvatting'}:</strong> ${escapeHtml(z.official.summary)}</p>` : ''}
+      ${z.official ? `<p class="detail-note"><strong>Samenvatting:</strong> ${escapeHtml(z.official.summary)}</p>` : ''}
       <p class="detail-note"><strong>Let op:</strong> de oranje cirkel is een berekende/geschatte zone. Bij NASA-zones komt die uit satellietdetecties; bij gemelde branden komt die uit de gerapporteerde hectare-oppervlakte. Dit is geen officiële brandperimeter. Windpijl = richting waar de wind naartoe blaast; rook/vuur kan lokaal anders bewegen door terrein.</p>
       ${newsLinks.length ? `<ul class="source-list">${newsLinks.map(n => `<li><a href="${escapeAttr(n.url)}" target="_blank" rel="noopener">${escapeHtml(n.title || n.source)}</a> <small>${escapeHtml(n.source || '')}</small></li>`).join('')}</ul>` : '<p class="detail-note">Geen extra melding gevonden die automatisch aan deze zone gekoppeld kon worden. Controleer officiële lokale bronnen.</p>'}`;
     openPanel();
@@ -648,7 +619,6 @@
   function formatArea(z){
     const areaKm2 = Number(z.areaKm2 || 0);
     const ha = areaKm2 * 100;
-    if(z.official?.focus) return `${formatNumber(ha)} ha bewakingszone (${formatNumber(areaKm2)} km²), geen bevestigde brandoppervlakte`;
     if(z.official && Number.isFinite(Number(z.official.hectares)) && Number(z.official.hectares) > 0){
       const officialHa = Number(z.official.hectares);
       return `${formatNumber(officialHa)} ha (${formatNumber(officialHa / 100)} km²)`;
@@ -659,14 +629,6 @@
   function mapAreaLabel(z){
     const areaKm2 = Number(z.areaKm2 || 0);
     const ha = areaKm2 * 100;
-    if(z.official?.focus){
-      return {
-        title: 'Focusgebied',
-        main: 'Carcassonne / Caux',
-        sub: `${formatNumber(ha)} ha bewakingszone`,
-        full: `Focusgebied rond Carcassonne en Caux-et-Sauzens: ${formatNumber(ha)} ha bewakingszone. Dit is geen bevestigde brandoppervlakte.`
-      };
-    }
     if(z.official && Number.isFinite(Number(z.official.hectares)) && Number(z.official.hectares) > 0){
       const officialHa = Number(z.official.hectares);
       return {
@@ -702,7 +664,6 @@
   }
   function zoneMeta(z){
     if(z.type === 'official'){
-      if(z.official?.focus) return `prioriteit rond Carcassonne en Caux-et-Sauzens · straal ${z.radiusKm.toFixed(1)} km · ${z.official.status}`;
       const area = z.official.hectares ? `${z.official.hectares} ha gemeld` : 'oppervlakte onbekend';
       return `${area} · geschatte zone ${z.radiusKm.toFixed(1)} km · update ${z.official.updated || 'onbekend'}`;
     }
