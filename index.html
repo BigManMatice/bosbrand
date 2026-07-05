@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="nl" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Brandkaart Zuid-Frankrijk — gecontroleerde live-info</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+  <header class="app-header">
+    <div class="title-block">
+      <h1>Brandkaart <span>Zuid-Frankrijk</span></h1>
+      <p class="subtitle">focus Carcassonne / Caux-et-Sauzens + officiële/gemelde branden + NASA-hittepunten + wind</p>
+    </div>
+
+    <div class="header-actions" aria-label="Acties">
+      <div class="status" aria-live="polite">
+        <span class="dot" id="status-dot"></span>
+        <span id="status-text">Nog niet geladen</span>
+      </div>
+      <button class="btn" id="theme-toggle" type="button">☀️ Licht</button>
+      <button class="btn" id="refresh-btn" type="button">⟳ Vernieuw</button>
+      <button class="btn" id="panel-toggle" type="button" aria-expanded="false" aria-controls="sidebar">☰ Overzicht</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="map" role="application" aria-label="Kaart met branddetecties en gemelde branden"></div>
+
+    <aside id="sidebar" aria-label="Brandinformatie">
+      <section class="card key-box" id="key-box">
+        <h2>1. Live starten</h2>
+        <p>Voor NASA FIRMS is een gratis <strong>MAP_KEY</strong> nodig. Zonder sleutel blijven de andere bronnen wel bruikbaar, maar zie je geen NASA-hittepunten.</p>
+        <label for="key-input">NASA FIRMS MAP_KEY</label>
+        <input id="key-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Plak hier je MAP_KEY" />
+        <button class="btn primary" id="key-save" type="button">Opslaan en laden</button>
+        <p class="note">De sleutel wordt lokaal in je browser bewaard. Vraag een gratis sleutel aan via NASA FIRMS.</p>
+      </section>
+
+      <section class="card summary-box">
+        <h2>Samenvatting</h2>
+        <div class="summary-grid">
+          <div><span id="zone-count">0</span><small>zones totaal</small></div>
+          <div><span id="hotspot-count">0</span><small>NASA-punten</small></div>
+          <div><span id="report-count">0</span><small>meldingen</small></div>
+        </div>
+      </section>
+
+      <section class="card detail-box" id="detail-box">
+        <h2>Geselecteerde brand</h2>
+        <div id="detail-content" class="detail-placeholder">Tik op een brandzone of melding. Carcassonne en Caux-et-Sauzens staan bovenaan als focusgebied. Dan zie je zone-oppervlakte, windrichting, NASA-punten en broncontrole.</div>
+      </section>
+
+      <section>
+        <h2>Legenda</h2>
+        <div class="legend-row"><span class="swatch swatch-zone"></span> Geschatte brandzone: officiële melding of gegroepeerde NASA-hittepunten</div>
+        <div class="legend-row"><span class="swatch swatch-high"></span> Hoge satellietbetrouwbaarheid</div>
+        <div class="legend-row"><span class="swatch swatch-medium"></span> Gemiddelde satellietbetrouwbaarheid</div>
+        <div class="legend-row"><span class="swatch swatch-report"></span> Gemelde brand zonder exacte NASA-match</div>
+        <div class="legend-row"><span class="wind-sample">➜</span> Windrichting</div>
+      </section>
+
+      <section>
+        <h2>Brandzones <span id="count-badge"></span></h2>
+        <div id="banner-area"></div>
+        <div id="fire-cards"><div class="empty-state">Nog geen data geladen.</div></div>
+      </section>
+
+      <section>
+        <h2>Specifieke meldingen</h2>
+        <div id="reported-fires"><div class="empty-state">Nog geen gemelde branden geladen.</div></div>
+      </section>
+
+      <section class="card source-box">
+        <h2>Bronnen en controle</h2>
+        <ul>
+          <li><strong>NASA FIRMS</strong>: hittepunten van VIIRS/MODIS. Dit zijn geen officiële brandgrenzen.</li>
+          <li><strong>Open-Meteo</strong>: actuele windrichting, windkracht en windstoten bij elke zone.</li>
+          <li><strong>Focus Carcassonne / Caux-et-Sauzens</strong>: extra controle op NASA-punten, wind en lokale meldingen. Geen officiële actieve brand wordt getoond zonder bron.</li>
+          <li><strong>Préfectures / SDIS / Feux de Forêt</strong>: broncontrole voor specifieke branden zoals Aude, Gard, Pyrénées-Orientales, Drôme en Bouches-du-Rhône.</li>
+          <li><strong>GDELT</strong>: recente nieuwsberichten om meldingen te vergelijken met media/overheden.</li>
+          <li><strong>Nominatim/OpenStreetMap</strong>: plaatsnaam en departement bij een geselecteerde zone.</li>
+        </ul>
+        <p class="warning"><strong>Niet gebruiken als evacuatie-instructie.</strong> Volg altijd brandweer, prefectuur, gemeente en noodnummer 112.</p>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
